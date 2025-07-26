@@ -2,47 +2,54 @@ import {validationResult } from 'express-validator'
 
 // import { courses } from '../data/courses.js';
 import course from '../model/course.model.js'
+import status from '../utils/httpStatus.js'
+import asyncWraper from '../middleWares/asyncWraper.js'
 
 const getAllCourses = async (req , res) => {
-    const courses = await course.find()
-    res.json(courses)
+    const query = req.query
+
+    const limit = query.limit || 10
+    const page = query.page || 1
+    const skip = (page - 1) * limit
+
+    const courses = await course.find({} , {"__v" : false}).limit(limit).skip(skip)
+    res.json({status : status.SUCCESS , data : {courses}})
 }
 
-const getCourse = async (req , res) => {
-    // const id = +req.params.id
-    // const course = courses.find((course) => course.id === id)
-
-    // const course = await course.findById(req.params.id)
-
-    // if(!course){
-    //     return res.status(404).json({msg : 'Not Found' })
-    // }
-    // res.json(course)
-    try{ const courseData = await course.findById(req.params.id)
+const getCourse = asyncWraper(
+async (req , res , next) => {
+    
+     const courseData = await course.findById(req.params.id)
 
         if (!courseData) {
-            return res.status(404).json({ msg: 'Not Found' })
+            const error = new Error()
+            error.message = 'not found course'
+            error.statusCode = 404
+            return next(error)
+            //return res.status(404).json({status : status.FAIL , data : {courseData : null}})
         }
 
-       return res.json(courseData)
-    } catch(err) {
-        return res.status(400).json({ msg: 'Invalide opject id' })
-    }
+       return res.json({status : status.SUCCESS , data : {courseData}})
+    // try{
+    // } catch(err) {
+    //     return res.status(400).json({status : status.ERROR , data : null , message : err.message , code : 400})
+    // }
        
 }
+)
 
 const addCourse = async (req , res) => {
         // console.log(req.body)
         const erorres = validationResult(req)
         if(!erorres.isEmpty()){
-            return res.status(400).json(erorres.array())
+            return res.status(400).json({status : status.FAIL , data : erorres.array()})
         }
         // console.log('erorres ' , erorres)
         // courses.push({id : courses.length + 1 , ...req.body})
 
         const newCourse = new course(req.body)
         await newCourse.save()
-        res.status(201).json(newCourse)
+        res.status(201).json({status : status.SUCCESS , data : {course : newCourse}})
 }
 
 const updateCourse = async (req , res) => {
@@ -51,9 +58,9 @@ const updateCourse = async (req , res) => {
     const courseid = req.params.id
     try{
          const updatedCourses = await course.updateOne({_id : courseid } , {$set: {...req.body}} )
-         return res.status(200).json(updatedCourses)
+         return res.status(200).json({status : status.SUCCESS , data : {course : updatedCourses}})
     } catch(err) {
-        return res.status(400).json({error : err})
+        return res.status(400).json({status : status.ERROR , message : err.message})
     }
    
 
@@ -68,9 +75,9 @@ const daleteCourse = async (req , res) => {
     // const id = +req.params.id
     // courses = courses.filter((course) => course.id !== id)
 
-    const data = await course.deleteOne({_id : req.params.id})
+    await course.deleteOne({_id : req.params.id})
     
-     res.status(200).json({success : true , msg : data})
+     res.status(200).json({status : status.SUCCESS , data : null})
    
 }
 
