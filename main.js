@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import status from './utils/httpStatus.js'
 // import { router } from './routes/courses.routes.js'
 import router from './routes/courses.routes.js'
+import useresRouter from './routes/users.routes.js'
 import cors from 'cors'
 
 
@@ -23,6 +24,7 @@ app.use(express.json())
 
 
 app.use('/api/courses' , router)
+app.use('/api/useres' , useresRouter)
 
 // console.log(status); // للتأكد
 
